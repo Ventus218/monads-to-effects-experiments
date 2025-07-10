@@ -1,5 +1,6 @@
+package main
+
 import cps.*
-import scala.concurrent.Future
 
 given CpsMonad[Option] with CpsPureMonadInstanceContext[Option] with
   def pure[T](t: T): Option[T] = Option(t)
@@ -7,13 +8,7 @@ given CpsMonad[Option] with CpsPureMonadInstanceContext[Option] with
   def map[A, B](fa: Option[A])(f: A => B): Option[B] = fa.map(f)
 
 @main
-def main: Unit =
-  val noneMap = Option.empty[Int].map(a => a + 5)
-  val noneFlatMap = Option.empty[Int].flatMap(a => Some(a + 5))
-
-  val someMap = Option(3).map(a => a + 5)
-  val someFlatMap = Option(3).flatMap(a => Some(a + 5))
-
+def testOption: Unit =
   println:
     async[Option] {
       val a = await(Option(1))
@@ -21,3 +16,54 @@ def main: Unit =
       val b = await(Option(3))
       a + b
     }
+
+import MyFuture.*
+import java.util.concurrent.Executors
+given CpsMonad[MyFuture] with CpsPureMonadInstanceContext[MyFuture] with
+  override def pure[T](t: T): MyFuture[T] = MyFuture(t)
+  override def map[A, B](fa: MyFuture[A])(f: A => B): MyFuture[B] = fa.map(f)
+  override def flatMap[A, B](fa: MyFuture[A])(
+      f: A => MyFuture[B]
+  ): MyFuture[B] = fa.flatMap(f)
+
+@main
+def testMyFuture: Unit =
+  val computation = for
+    a <- MyFuture(println("a"))
+    b <- MyFuture(println("b"))
+    many <- MyFuture.concurrently(
+      () => println("c"),
+      () => println("d"),
+      () => println("e"),
+      () => println("f"),
+      () => println("g"),
+      () => println("h"),
+      () => println("i")
+    )
+    j <- MyFuture(println("j"))
+  yield (many.map(_ => 1))
+  val exec = Executors.newFixedThreadPool(2)
+  computation.run(exec)
+
+  Thread.sleep(200)
+  println()
+  println()
+
+  val computation2 = async[MyFuture] {
+    val a = MyFuture(println("a")).await
+    val b = MyFuture(println("b")).await
+    val many = MyFuture
+      .concurrently(
+        () => println("c"),
+        () => println("d"),
+        () => println("e"),
+        () => println("f"),
+        () => println("g"),
+        () => println("h"),
+        () => println("i")
+      )
+      .await
+    val j = MyFuture(println("j")).await
+  }
+  computation2.run(exec)
+  exec.close()
