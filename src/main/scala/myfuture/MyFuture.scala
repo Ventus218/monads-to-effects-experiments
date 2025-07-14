@@ -1,4 +1,4 @@
-package future
+package myfuture
 
 import java.util.concurrent.{ExecutorService, Future as JFuture}
 import scala.util.{Try, Failure, Success}
@@ -36,7 +36,6 @@ extension [A](f: MyFuture[A])
           case Success(value)     => f(value).run(executor)
 
 import java.util.concurrent.Executors
-import future.MyFuture
 import cps.*
 
 given CpsMonad[MyFuture] with CpsPureMonadInstanceContext[MyFuture] with
