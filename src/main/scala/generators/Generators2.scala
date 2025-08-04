@@ -5,7 +5,7 @@ package generators
   * of hasNext
   */
 object Generators2 extends App:
-  class Generator[A] extends Iterator[A] {
+  class Generator[A] extends Iterator[A]:
 
     /** Evaluates and returns the next value
       */
@@ -20,7 +20,6 @@ object Generators2 extends App:
       * It is used by _yield to set a continuation as a side effect
       */
     var computeNext: Option[() => A] = None
-  }
 
   /** Lets a generator function produce a value while also specifying a
     * continuation to produce the next one

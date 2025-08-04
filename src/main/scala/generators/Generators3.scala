@@ -4,7 +4,7 @@ package generators
   * Generator instantiation and then by each call to next
   */
 object Generators3 extends App:
-  class Generator[A] extends Iterator[A] {
+  class Generator[A] extends Iterator[A]:
 
     /** Returns the computed value and tries to produce a new one
       */
@@ -24,7 +24,6 @@ object Generators3 extends App:
     /** `nextVal` is used to store the next value
       */
     var nextVal: Option[A] = None
-  }
 
   /** Lets a generator function produce a value while also specifying a
     * continuation
