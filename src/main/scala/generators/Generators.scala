@@ -27,16 +27,10 @@ class Generator[A] extends Iterator[A] {
   private var nextVal: Option[A] = None
 }
 
-/** Marks the end of a generator function
-  */
-def yieldReturn[A](using g: Generator[A]): Generator[A] =
-  g.computeNext = () => None
-  g
-
 /** Lets a generator function produce a value while also specifying a
   * continuation
   */
-def yieldContinue[A](a: A, c: () => Generator[A])(using
+def _yield[A](a: A, c: () => Generator[A])(using
     g: Generator[A]
 ): Generator[A] =
   g.computeNext = () =>
@@ -46,6 +40,12 @@ def yieldContinue[A](a: A, c: () => Generator[A])(using
         case true  => Some(g.next())
         case false => None
     Some(a)
+  g
+
+/** Marks the end of a generator function without producing any value
+  */
+def _yield[A](using g: Generator[A]): Generator[A] =
+  g.computeNext = () => None
   g
 
 /** This type allows to hide the context parameter in the return type of
@@ -74,9 +74,9 @@ def backwardCounter(n: Int): Gen[Int] =
   generator:
     n match
       case 0 =>
-        yieldReturn
+        _yield
       case _ =>
-        yieldContinue(n, () => backwardCounter(n - 1))
+        _yield(n, () => backwardCounter(n - 1))
 
 object Generators extends App:
 
