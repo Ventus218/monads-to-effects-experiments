@@ -65,20 +65,18 @@ object Generators:
           Option[GeneratorInstance[A]]
       ) ?=> GeneratorInstance[A]
   ): Generator[A] =
-    given g: GeneratorInstance[A] =
-      summon[Option[GeneratorInstance[A]]].getOrElse(GeneratorImpl())
-    given Option[GeneratorInstance[A]] = Some(g)
-    f
+    val g = summon[Option[GeneratorInstance[A]]].getOrElse(GeneratorImpl())
+    f(using g, Some(g))
 
 object TestGenerators extends App:
   import Generators.*
 
   def backwardCounter(n: Int): Generator[Int] =
     println(s"Run with param: $n")
-    // generator will create a Generator only if there is no
+    // generator will create a GeneratorInstance only if there is no
     // one in scope otherwise it will use the one he found.
     // This means that N recursive calls to generator won't
-    // instantiate N Generators but just 1.
+    // instantiate N GeneratorInstances but just 1.
     generator:
       n match
         case 0 =>
