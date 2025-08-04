@@ -31,12 +31,12 @@ object Generators extends App:
   /** Lets a generator function produce a value while also specifying a
     * continuation
     */
-  def _yield[A](a: A, c: () => Generator[A])(using
+  def _yield[A](a: A, continueWith: => Generator[A])(using
       g: Generator[A]
   ): Generator[A] =
     g.computeNext = () =>
       g.computeNext = () =>
-        val g = c()
+        val g = continueWith
         g.hasNext match
           case true  => Some(g.next())
           case false => None
@@ -77,7 +77,8 @@ object Generators extends App:
         case 0 =>
           _yield
         case _ =>
-          _yield(n, () => backwardCounter(n - 1))
+          _yield(n, backwardCounter(n - 1))
+        // _yield(n, continueWith = backwardCounter(n - 1))
 
   // Checking that a Generator can produce no values
   for a <- backwardCounter(0) do println(a)
