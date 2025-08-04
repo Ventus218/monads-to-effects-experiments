@@ -1,7 +1,8 @@
 package generators
 
-object Generators extends App:
-  class Generator[A] extends Iterator[A] {
+object Generators:
+  opaque type GeneratorInstance[A] <: Iterator[A] = GeneratorImpl[A]
+  private class GeneratorImpl[A] extends Iterator[A]:
 
     /** Returns the computed value and removes it from the "cache"
       */
@@ -26,14 +27,13 @@ object Generators extends App:
     /** `nextVal` is used to memoize the value produced by `computeNext`
       */
     private var nextVal: Option[A] = None
-  }
 
   /** Lets a generator function produce a value while also specifying a
     * continuation
     */
-  def _yield[A](a: A, continueWith: => Generator[A])(using
-      g: Generator[A]
-  ): Generator[A] =
+  def _yield[A](a: A, continueWith: => GeneratorInstance[A])(using
+      g: GeneratorInstance[A]
+  ): GeneratorInstance[A] =
     g.computeNext = () =>
       g.computeNext = () =>
         val g = continueWith
@@ -45,28 +45,35 @@ object Generators extends App:
 
   /** Marks the end of a generator function without producing any value
     */
-  def _yield[A](using g: Generator[A]): Generator[A] =
+  def _yield[A](using g: GeneratorInstance[A]): GeneratorInstance[A] =
     g.computeNext = () => None
     g
 
   /** This type allows to hide the context parameter in the return type of
     * generator functions
     */
-  type Gen[A] = Option[Generator[A]] ?=> Generator[A]
+  type Generator[A] = Option[GeneratorInstance[A]] ?=> GeneratorInstance[A]
 
   /** This given instance allows the user to not explicitly set a None as the
     * initial Generator of the recursive generator function
     */
-  given [A]: Option[Generator[A]] = None
+  given [A]: Option[GeneratorInstance[A]] = None
 
   def generator[A](
-      f: (Generator[A], Option[Generator[A]]) ?=> Generator[A]
-  ): Gen[A] =
-    given g: Generator[A] = summon[Option[Generator[A]]].getOrElse(Generator())
-    given Option[Generator[A]] = Some(g)
+      f: (
+          GeneratorInstance[A],
+          Option[GeneratorInstance[A]]
+      ) ?=> GeneratorInstance[A]
+  ): Generator[A] =
+    given g: GeneratorInstance[A] =
+      summon[Option[GeneratorInstance[A]]].getOrElse(GeneratorImpl())
+    given Option[GeneratorInstance[A]] = Some(g)
     f
 
-  def backwardCounter(n: Int): Gen[Int] =
+object TestGenerators extends App:
+  import Generators.*
+
+  def backwardCounter(n: Int): Generator[Int] =
     println(s"Run with param: $n")
     // generator will create a Generator only if there is no
     // one in scope otherwise it will use the one he found.
