@@ -1,14 +1,15 @@
 package generators
 
-/** This design is more verbose for the user but enables to move the computation
-  * of the next value when calling next instead of hasNext
+/** This design is more verbose for the user and relies on his discipline but
+  * enables to move the computation of the next value when calling next instead
+  * of hasNext
   */
 object Generators2 extends App:
   class Generator[A] extends Iterator[A] {
 
     /** Evaluates and returns the next value
       */
-    override def next(): A = computeNext.get().get
+    override def next(): A = computeNext.get()
 
     /** Checks if it is possible to compute a next value
       */
@@ -18,25 +19,37 @@ object Generators2 extends App:
       *
       * It is used by _yield to set a continuation as a side effect
       */
-    var computeNext: Option[() => Option[A]] = None
+    var computeNext: Option[() => A] = None
   }
 
   /** Lets a generator function produce a value while also specifying a
-    * continuation. The given continuation can be None in which case it means
-    * that the generator has finished producing values
+    * continuation to produce the next one
     */
-  def _yield[A](a: A, c: Option[() => Generator[A]])(using
+  def _yield[A](a: A, c: () => Generator[A])(using
       g: Generator[A]
   ): Generator[A] =
     g.computeNext = Some: () =>
-      g.computeNext = c.map(c =>
-        () =>
-          val g = c()
-          g.hasNext match
-            case true  => Some(g.next())
-            case false => None
-      )
-      Some(a)
+      g.computeNext = Some: () =>
+        /*
+         Here we do not check `hasNext` before calling `next`.
+         In this design a continuation always returns an A (non an Option[A])
+         this means that even if we checked `hasNext` we would not be able to
+         do anything but crash. So we rely on the programmert to always call `_yield(a: A)`
+         before `_yield`
+         */
+        c().next()
+      a
+    g
+
+  /** Lets a generator function produce the last value.
+    *
+    * In this design this function has to be called in order to signal the last
+    * produced value
+    */
+  def _yield[A](a: A)(using g: Generator[A]): Generator[A] =
+    g.computeNext = Some: () =>
+      g.computeNext = None
+      a
     g
 
   /** Marks the end of a generator function without producing any value
@@ -73,9 +86,9 @@ object Generators2 extends App:
         case 0 =>
           _yield
         case 1 =>
-          _yield(n, None)
+          _yield(n)
         case _ =>
-          _yield(n, Some(() => backwardCounter(n - 1)))
+          _yield(n, () => backwardCounter(n - 1))
 
   // Checking that a Generator can produce no values
   for a <- backwardCounter(0) do println(a)
